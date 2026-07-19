@@ -4,16 +4,45 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 
 import click
 
 from immich_cli.client import ImmichClient, ImmichError
-from immich_cli.logging_setup import configure_logging
+from immich_cli.logging_setup import configure_logging, redact_api_key
 from immich_cli.models import Metadata
 
 log = logging.getLogger(__name__)
+
+
+def _echo_command_line() -> None:
+    """Log the exact invocation (API key redacted) for debugging.
+
+    Echoes ``sys.argv`` as a single line so misbehaviour is reproducible from
+    the trace. The key is masked wherever it appears (``--api-key VALUE`` or
+    the ``IMMICH_API_KEY`` env var, if the option was omitted on the CLI).
+    """
+    argv = list(sys.argv)
+    masked = redact_api_key(argv)
+    env_key = os.environ.get("IMMICH_API_KEY")
+    env_note = "" if env_key is None else " [IMMICH_API_KEY env present]"
+    log.debug("command line:%s %s", " ".join(masked), env_note)
+
+
+def _discover_xmp(file: Path) -> Path | None:
+    """Find a sidecar XMP next to ``file``.
+
+    Tries the image convention ``<file.name>.xmp`` (e.g. ``19580128.jpg.xmp``)
+    first, then the bare-stem form ``<stem>.xmp`` (e.g. ``19580128.xmp``).
+    Returns the first existing path, else ``None``.
+    """
+    candidates = [file.with_name(file.name + ".xmp"), file.with_suffix(".xmp")]
+    for cand in candidates:
+        if cand.exists():
+            return cand
+    return None
 
 
 @click.group()
@@ -49,6 +78,7 @@ def main(
 ) -> None:
     """Upload assets (with XMP metadata) to an Immich server."""
     configure_logging(verbose=verbose, log_file=log_file)
+    _echo_command_line()
     if not server or not api_key:
         raise click.UsageError(
             "Both --server and --api-key are required "
@@ -93,6 +123,14 @@ def upload(
 ) -> None:
     """Upload FILE to Immich, attaching metadata via an XMP sidecar."""
     log.debug("upload command: file=%s meta_json=%s xmp=%s", file, meta_json, xmp)
+    if xmp is None:
+        discovered = _discover_xmp(file)
+        if discovered is not None:
+            xmp = discovered
+            log.debug("auto-discovered XMP sidecar: %s", xmp)
+        else:
+            log.debug("no XMP sidecar found next to %s (tried %s.jpg.xmp / .xmp)",
+                      file, file.stem)
     metadata = _build_metadata(
         meta_json, description, tags, albums, people, gps, rating, favorite, archive
     )

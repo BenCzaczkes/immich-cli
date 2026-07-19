@@ -25,6 +25,34 @@ LOG_FORMAT = "%(asctime)s %(levelname)-8s %(name)s: %(message)s"
 DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.%f%z"
 
 
+def redact_api_key(argv: list[str]) -> list[str]:
+    """Return a copy of ``argv`` with any API key value masked.
+
+    Handles ``--api-key VALUE`` and the ``--api-key=VALUE`` forms. Everything
+    else (paths, URLs, flags) is left untouched so the echoed command line
+    stays faithful for reproduction.
+    """
+    out: list[str] = []
+    skip_next = False
+    for i, token in enumerate(argv):
+        if skip_next:
+            out.append("<redacted>")
+            skip_next = False
+            continue
+        if token == "--api-key":
+            # Value is the next token.
+            if i + 1 < len(argv):
+                out.append(token)
+                out.append("<redacted>")
+                continue
+            out.append(token)
+        elif token.startswith("--api-key=") or token.startswith("--api-key"):
+            out.append("--api-key=<redacted>")
+        else:
+            out.append(token)
+    return out
+
+
 def _format_time(record: logging.LogRecord, date_format: str = DATE_FORMAT) -> str:
     """Format the record time with microseconds.
 
