@@ -88,9 +88,17 @@ Verified against a live server during smoke tests:
 
 - People link enforcement (PersonInImage is stored in sidecar/XMP; not yet
   linked to Immich people on the server).
-- Faces ingestion fix: Immich/another source locates faces — we only upload
-  them. **Download feature now built** (see below) to inspect what Immich
-  actually stored and investigate why uploaded MWG regions report `faces: 0`.
+- **Faces ingestion fix (upload-side):** Immich/another source locates faces —
+  we only upload them. Evidence gathered via the download command
+  (downloads/19580128.jpg.meta.json): faces ARE stored server-side
+  (face_regions=2, valid PIXEL boxes, source_type=machine-learning, named
+  people). rating=5 / favorite=True / album='My Album' all round-trip. So the
+  `faces: 0` bug is on the UPLOAD / XMP-WRITE side, not download. Next thread:
+  compare xmp.py::generate_mwg_regions output (normalized center-based MWG-RS
+  Areas) against what Immich's ML stores (pixel boxes + AppliedToDimensions) —
+  likely a schema/normalization or namespace mismatch the server ignores.
+  Note: downloaded boxes are pixel coords; upload path normalizes by
+  image_width/height — verify the round-trip is consistent.
 - Asset delete command (to clean up test uploads).
 
 ## Recently built
