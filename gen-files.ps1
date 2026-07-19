@@ -23,9 +23,18 @@ if (-not $root) { $root = Get-Location }
 
 $files = @()
 
-# Package sources under src/immich_cli (exclude __pycache__).
+# Skip these directories (relative-name match anywhere in the path).
+$excludeDirs = @('__pycache__', '.venv', '.git', 'node_modules', 'tests')
+function Test-Excluded($path) {
+    foreach ($d in $excludeDirs) {
+        if ($path -match "[\\/]$d[\\/]?") { return $true }
+    }
+    return $false
+}
+
+# Package sources under src/immich_cli (exclude __pycache__ / .venv / etc.).
 Get-ChildItem -Path $root -Recurse -Filter *.py |
-    Where-Object { $_.FullName -notmatch '[\\/]__pycache__[\\/]?' } |
+    Where-Object { -not (Test-Excluded $_.FullName) } |
     ForEach-Object { $files += $_.FullName }
 
 # Root-level .py (e.g. build_windows.py); skip a stray root __init__.py.
