@@ -49,12 +49,13 @@ def _discover_xmp(file: Path) -> Path | None:
 @click.option(
     "--server",
     envvar="IMMICH_SERVER",
-    help="Immich server base URL (e.g. https://immich.example.com/api).",
+    help="Immich server base URL (e.g. https://immich.example.com/api). "
+         "Env: IMMICH_SERVER.",
 )
 @click.option(
     "--api-key",
     envvar="IMMICH_API_KEY",
-    help="Immich API key (X-API-Key). Defaults to $IMMICH_API_KEY.",
+    help="Immich API key (X-API-Key). Env: IMMICH_API_KEY.",
 )
 @click.option(
     "--verbose",
@@ -76,7 +77,23 @@ def main(
     verbose: bool,
     log_file: str | None,
 ) -> None:
-    """Upload assets (with XMP metadata) to an Immich server."""
+    """Upload assets (with XMP metadata) to an Immich server.
+
+    ENVIRONMENT VARIABLES (alternative to the --server / --api-key flags):
+      IMMICH_SERVER   server base URL, e.g. https://immich.example.com/api
+      IMMICH_API_KEY  Immich API key (sent as the X-API-Key header)
+
+    EXAMPLE:
+      immich-cli --log trace.log upload photo.jpg \
+          --server https://immich.example.com/api --api-key YOUR_KEY \
+          --description "Holiday" --tag Family --tag "Places/Paris" --gps 48.85,2.35
+
+    DEBUG TRACING (opt-in, silent by default):
+      --verbose   mirror the full debug trace to the console (stderr)
+      --log FILE  write the full debug trace to FILE (API key redacted)
+      On startup the exact command line is echoed to the trace with the
+      API key masked, for reproducible debugging.
+    """
     configure_logging(verbose=verbose, log_file=log_file)
     _echo_command_line()
     if not server or not api_key:
