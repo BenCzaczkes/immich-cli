@@ -31,6 +31,15 @@ def _echo_command_line() -> None:
     log.debug("command line:%s %s", " ".join(masked), env_note)
 
 
+def _help_requested() -> bool:
+    """Return True if a --help / -h flag appears anywhere in the CLI args.
+
+    Lets `upload --help` (or `immich-cli --help`) render without requiring
+    credentials, which are only needed to actually run an upload.
+    """
+    return any(arg in ("--help", "-h") for arg in sys.argv[1:])
+
+
 def _discover_xmp(file: Path) -> Path | None:
     """Find a sidecar XMP next to ``file``.
 
@@ -83,9 +92,15 @@ def main(
       IMMICH_SERVER   server base URL, e.g. https://immich.example.com/api
       IMMICH_API_KEY  Immich API key (sent as the X-API-Key header)
 
+    OPTION PLACEMENT:
+      Global options (--server, --api-key, --verbose, --log) go BEFORE the
+      command. Command options (--album, --tag, --description, --gps, ...) go
+      AFTER the command and its FILE argument. Example shows the split.
+
     EXAMPLE:
-      immich-cli --log trace.log upload photo.jpg \
+      immich-cli --log trace.log \
           --server https://immich.example.com/api --api-key YOUR_KEY \
+          upload photo.jpg \
           --description "Holiday" --tag Family --tag "Places/Paris" --gps 48.85,2.35
 
     DEBUG TRACING (opt-in, silent by default):
@@ -96,7 +111,10 @@ def main(
     """
     configure_logging(verbose=verbose, log_file=log_file)
     _echo_command_line()
-    if not server or not api_key:
+    # Credentials are required to actually run a command, but not to show
+    # help. Let --help (group or subcommand) render without them.
+    help_requested = bool(ctx.params.get("help")) or _help_requested()
+    if not help_requested and (not server or not api_key):
         raise click.UsageError(
             "Both --server and --api-key are required "
             "(or set IMMICH_SERVER / IMMICH_API_KEY)."
@@ -115,7 +133,7 @@ def main(
               help="Use this pre-existing .xmp sidecar instead of generating one.")
 @click.option("--description", help="Asset description (dc:description).")
 @click.option("--tag", "tags", multiple=True, help="Tag to apply (repeatable). Hierarchical: A/B.")
-@click.option("--album", "albums", multiple=True, help="Album name (stored in sidecar; v1 stub).")
+@click.option("--album", "albums", multiple=True, help="Album name (repeatable). Created if missing, then the asset is added to it.")
 @click.option("--person", "people", multiple=True, help="Person name (iptc-core:PersonInImage).")
 @click.option("--gps", help="GPS as 'lat,lon' (decimal degrees), e.g. 48.8566,2.3522.")
 @click.option("--rating", type=click.IntRange(-1, 5), default=None, help="Star rating -1..5.")
@@ -138,7 +156,15 @@ def upload(
     archive: bool,
     no_tags: bool,
 ) -> None:
-    """Upload FILE to Immich, attaching metadata via an XMP sidecar."""
+    """Upload FILE to Immich, attaching metadata via an XMP sidecar.
+
+    OPTION PLACEMENT: every option below is a COMMAND option and must appear
+    AFTER the command and its FILE argument, e.g.:
+        immich-cli upload PHOTO.JPG --album "Trip" --tag Family
+    The connection options (--server, --api-key) and debug tracing (--verbose,
+    --log) are GLOBAL options and go BEFORE the `upload` command instead.
+    Run `immich-cli --help` for the global options and a full example.
+    """
     log.debug("upload command: file=%s meta_json=%s xmp=%s", file, meta_json, xmp)
     if xmp is None:
         discovered = _discover_xmp(file)
@@ -178,6 +204,11 @@ def upload(
                 client.apply_tags(asset_id, list(metadata.tags))
                 log.debug("applied %d tag(s)", len(metadata.tags))
                 click.echo(f"Applied {len(metadata.tags)} tag(s).")
+
+            if metadata.albums:
+                client.apply_albums(asset_id, list(metadata.albums))
+                log.debug("applied %d album(s)", len(metadata.albums))
+                click.echo(f"Added to {len(metadata.albums)} album(s): {', '.join(metadata.albums)}")
 
             if metadata.is_favorite or metadata.rating is not None or metadata.is_archived:
                 client.apply_flags(asset_id, metadata)
