@@ -1,0 +1,9 @@
+build_windows.py
+src/immich_cli/__init__.py
+src/immich_cli/__main__.py
+src/immich_cli/cli.py
+src/immich_cli/client.py
+src/immich_cli/logging_setup.py
+src/immich_cli/meta_export.py
+src/immich_cli/models.py
+src/immich_cli/xmp.py

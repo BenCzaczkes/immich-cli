@@ -116,3 +116,13 @@ Verified against a live server during smoke tests:
   — Nuitka can't cross-compile a Windows exe from Linux. Verified: `__main__.exe`
   built and `--help` ran correctly; approach B (package dir + -m) adopted for
   proper `immich-cli.exe` naming.
+  **Gotcha (sync staleness):** `files-to-copy.txt` is a STATIC list that the
+  Windows copy script reads. If it predates a new module, that module is NOT
+  copied and `uv run` (or the exe) fails with `ModuleNotFoundError`
+  (e.g. `immich_cli.meta_export` was missing until the list was regenerated).
+  Fix: regenerate the list before each sync. `gen-files.ps1` (in repo root)
+  collects all project `.py` files and writes `files-to-copy.txt` — run it
+  (or have winclirun.ps1 call it) before copying. The Nuitka `.exe` is also a
+  static compile, so after `src/` changes rebuild it with
+  `uv run ./build_windows.py` if you use the exe; for testing, `uv run` uses
+  live source and needs no rebuild. `downloads/` is gitignored (test output).
