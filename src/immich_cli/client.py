@@ -284,6 +284,88 @@ class ImmichClient:
         if r.status_code >= 400:
             raise ImmichError(f"Tag apply failed ({r.status_code}): {r.text[:500]}")
 
+    # ------------------------------------------------------------------ #
+    # Albums (get-or-create, then add the asset)
+    # ------------------------------------------------------------------ #
+
+    def apply_albums(self, asset_id: str, album_names: list[str]) -> None:
+        """Resolve *album_names* and add *asset_id* to each.
+
+        Mirrors the desktop app's AlbumResolver flow (single-image scope, so
+        no concurrent-duplicate-creation race to manage):
+
+        1. ``GET /albums`` -> build a case-insensitive name -> id map.
+        2. For each name: reuse the existing id, or ``POST /albums`` to create
+           it (preserving the exact name passed).
+        3. ``PUT /albums/{id}/assets`` with ``{"ids": [asset_id]}``.
+
+        Parameters
+        ----------
+        asset_id:
+            The uploaded asset's id.
+        album_names:
+            Album names to resolve and add the asset to.
+        """
+        names = [n.strip() for n in album_names if n and n.strip()]
+        if not names:
+            return
+
+        existing = self._get_album_lookup()
+        album_ids: list[str] = []
+        for name in names:
+            album_id = existing.get(name.lower())
+            if album_id:
+                logger.debug("apply_albums: reusing existing album '%s' (%s)", name, album_id)
+                album_ids.append(album_id)
+                continue
+            album_id = self._create_album(name)
+            logger.debug("apply_albums: created album '%s' (%s)", name, album_id)
+            album_ids.append(album_id)
+
+        album_ids = list(dict.fromkeys(album_ids))  # dedupe, preserve order
+        if not album_ids:
+            return
+        self.add_asset_to_album(album_ids, asset_id)
+
+    def _get_album_lookup(self) -> dict[str, str]:
+        """Return a lower-cased albumName -> id map from ``GET /albums``."""
+        r = self._client.get("/albums")
+        if r.status_code >= 400:
+            raise ImmichError(f"Album list failed ({r.status_code}): {r.text[:500]}")
+        lookup: dict[str, str] = {}
+        for album in r.json():
+            name = (album.get("albumName") or "").strip().lower()
+            album_id = album.get("id")
+            if name and album_id:
+                lookup[name] = album_id
+        return lookup
+
+    def _create_album(self, name: str) -> str:
+        """Create an album named *name* (exact casing) and return its id."""
+        r = self._client.post("/albums", json={"albumName": name})
+        if r.status_code >= 400:
+            # Already exists (e.g. concurrent) — reuse by name.
+            reuse = self._get_album_lookup().get(name.lower())
+            if reuse:
+                return reuse
+            raise ImmichError(f"Album create failed ({r.status_code}): {r.text[:500]}")
+        album_id = r.json().get("id")
+        if not album_id:
+            raise ImmichError("Album create returned no id")
+        return album_id
+
+    def add_asset_to_album(self, album_ids: list[str], asset_id: str) -> None:
+        """Add *asset_id* to each album in *album_ids* (PUT /albums/{id}/assets)."""
+        for album_id in album_ids:
+            r = self._client.put(
+                f"/albums/{album_id}/assets",
+                json={"ids": [asset_id]},
+            )
+            if r.status_code >= 400:
+                raise ImmichError(
+                    f"Album add failed ({r.status_code}): {r.text[:500]}"
+                )
+
     def _get_tag_lookup(self) -> dict[str, str]:
         """Return a lower-cased tag-value/name → id map from ``GET /tags``."""
         r = self._client.get("/tags")
@@ -348,6 +430,44 @@ class ImmichClient:
         r = self._client.put(f"/assets/{asset_id}", json=body)
         if r.status_code >= 400:
             raise ImmichError(f"Flag apply failed ({r.status_code}): {r.text[:500]}")
+
+    # ------------------------------------------------------------------ #
+    # Download (for inspecting an existing asset, e.g. faces investigation)
+    # ------------------------------------------------------------------ #
+
+    def download_asset(
+        self, asset_id: str, dest_path: str | Path, original: bool = True
+    ) -> Path:
+        """Download an asset's bytes to *dest_path*.
+
+        Used to pull an existing Immich asset locally so its metadata (e.g.
+        face regions) can be inspected — Immich (or another source) locates
+        faces; we only upload them. Downloads the original rendition by
+        default (``GET /assets/{id}/original``); pass ``original=False`` for
+        the thumbnail.
+
+        Parameters
+        ----------
+        asset_id:
+            The asset id to download.
+        dest_path:
+            File path to write the bytes to.
+        original:
+            If True, fetch the original; otherwise the thumbnail.
+
+        Returns
+        -------
+        Path
+            The path the bytes were written to.
+        """
+        endpoint = f"/assets/{asset_id}/original" if original else f"/assets/{asset_id}/thumbnail"
+        r = self._client.get(endpoint)
+        if r.status_code >= 400:
+            raise ImmichError(f"Download failed ({r.status_code}): {r.text[:500]}")
+        dest_path = Path(dest_path)
+        dest_path.write_bytes(r.content)
+        logger.debug("download_asset: wrote %d bytes -> %s", len(r.content), dest_path)
+        return dest_path
 
 
 def _iso_now() -> str:

@@ -86,9 +86,22 @@ Verified against a live server during smoke tests:
 
 ## What's NOT built yet (possible next steps)
 
-- Albums application (currently sidecar-only stub), people link enforcement.
-- Faces ingestion fix (likely XMP schema or `POST /faces` investigation).
+- People link enforcement (PersonInImage is stored in sidecar/XMP; not yet
+  linked to Immich people on the server).
+- Faces ingestion fix: Immich/another source locates faces — we only upload
+  them. Need to **download an existing asset** (`ImmichClient.download_asset`
+  via `GET /assets/{id}/original`, now wired) to inspect face regions and
+  investigate why uploaded MWG regions report `faces: 0`.
 - Asset delete command (to clean up test uploads).
+
+## Recently built
+
+- **Albums application**: `--album NAME` (repeatable) now resolves via
+  `ImmichClient.apply_albums` — `GET /albums` lookup (case-insensitive),
+  `POST /albums` create if missing, `PUT /albums/{id}/assets` to add. Single-
+  image scope only (no batch/race handling yet). Mirrors desktop AlbumResolver.
+- **Download helper**: `ImmichClient.download_asset(asset_id, dest)` for the
+  faces investigation (original rendition).
 - **Windows `.exe` build: working via Nuitka** (replaces PyInstaller, which
   was dropped). `build_windows.py` compiles `src/immich_cli` with
   `--python-flag=-m` (runs `immich_cli.__main__`) → native `immich-cli.exe`.
