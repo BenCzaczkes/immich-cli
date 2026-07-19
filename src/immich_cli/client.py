@@ -181,12 +181,12 @@ class ImmichClient:
         if not leaf_ids:
             return
 
+        # Immich bulk-tag endpoint: PUT /tags/assets with tagIds + assetIds.
         r = self._client.put(
-            "/assets/bulk",
+            "/tags/assets",
             json={
-                "tags": leaf_ids,
+                "tagIds": leaf_ids,
                 "assetIds": [asset_id],
-                "method": "add",
             },
         )
         if r.status_code >= 400:
