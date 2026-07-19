@@ -22,3 +22,7 @@ dist/
 .env
 *.meta.json
 *.xmp
+
+# ...but always track the sample fixtures (project examples, not user output)
+!samples/
+!samples/**
