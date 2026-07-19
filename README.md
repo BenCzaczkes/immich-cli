@@ -1,5 +1,8 @@
 # immich-cli
 
+<!-- CI status badge (replace OWNER/repo with the GitHub slug if/when the repo is public) -->
+[![CI](https://github.com/BenCzaczkes/immich-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/BenCzaczkes/immich-cli/actions/workflows/ci.yml)
+
 A **standalone command-line tool** to upload assets (photos/videos) to an
 Immich server, attaching complete metadata via an XMP sidecar. Built on
 [HTTPX](https://www.python-httpx.org/) and [Click](https://click.palletsprojects.com/).
@@ -63,3 +66,8 @@ src/immich_cli/
   cli.py      # Click command(s)
   __main__.py # `python -m immich_cli`
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). (This repository is private for the
+time being; contribution is by invitation.)
