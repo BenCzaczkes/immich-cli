@@ -89,9 +89,8 @@ Verified against a live server during smoke tests:
 - People link enforcement (PersonInImage is stored in sidecar/XMP; not yet
   linked to Immich people on the server).
 - Faces ingestion fix: Immich/another source locates faces — we only upload
-  them. Need to **download an existing asset** (`ImmichClient.download_asset`
-  via `GET /assets/{id}/original`, now wired) to inspect face regions and
-  investigate why uploaded MWG regions report `faces: 0`.
+  them. **Download feature now built** (see below) to inspect what Immich
+  actually stored and investigate why uploaded MWG regions report `faces: 0`.
 - Asset delete command (to clean up test uploads).
 
 ## Recently built
@@ -100,8 +99,15 @@ Verified against a live server during smoke tests:
   `ImmichClient.apply_albums` — `GET /albums` lookup (case-insensitive),
   `POST /albums` create if missing, `PUT /albums/{id}/assets` to add. Single-
   image scope only (no batch/race handling yet). Mirrors desktop AlbumResolver.
-- **Download helper**: `ImmichClient.download_asset(asset_id, dest)` for the
-  faces investigation (original rendition).
+- **Download command** (`immich-cli download ASSET_ID [--out DIR]`, default
+  `./downloads`): `POST /download/archive` (zip) → extract image via stdlib
+  `zipfile` → `GET /assets/{id}` + `GET /faces?id=` + `GET /albums?assetId=`
+  → write `<image>.<ext>.meta.json` (+ `<image>.<ext>.xmp` sidecar for
+  stars/people) via `meta_export.generate_meta_export`. Ported from the
+  desktop app's `core/meta_export.py` (same `MetaExport` v1 schema + the
+  "box tipping" guard that drops degenerate/out-of-bounds face boxes).
+  New module `src/immich_cli/meta_export.py` (uses CLI's `xmp.generate_xmp_sidecar`).
+  Use this to investigate the faces gap on the two real photos.
 - **Windows `.exe` build: working via Nuitka** (replaces PyInstaller, which
   was dropped). `build_windows.py` compiles `src/immich_cli` with
   `--python-flag=-m` (runs `immich_cli.__main__`) → native `immich-cli.exe`.

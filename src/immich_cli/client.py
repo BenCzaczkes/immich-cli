@@ -435,39 +435,53 @@ class ImmichClient:
     # Download (for inspecting an existing asset, e.g. faces investigation)
     # ------------------------------------------------------------------ #
 
-    def download_asset(
-        self, asset_id: str, dest_path: str | Path, original: bool = True
-    ) -> Path:
-        """Download an asset's bytes to *dest_path*.
+    def download_archive(self, asset_id: str, dest_path: str | Path) -> Path:
+        """Download a single asset as an archive (zip) to *dest_path*.
 
-        Used to pull an existing Immich asset locally so its metadata (e.g.
-        face regions) can be inspected — Immich (or another source) locates
-        faces; we only upload them. Downloads the original rendition by
-        default (``GET /assets/{id}/original``); pass ``original=False`` for
-        the thumbnail.
+        Immich serves original downloads as a zip (even for one asset), so we
+        use the archive endpoint rather than ``GET /assets/{id}/original``.
+        Returns the path to the written zip; the caller unzips it.
 
         Parameters
         ----------
         asset_id:
             The asset id to download.
         dest_path:
-            File path to write the bytes to.
-        original:
-            If True, fetch the original; otherwise the thumbnail.
+            File path to write the zip to.
 
         Returns
         -------
         Path
-            The path the bytes were written to.
+            The path the zip was written to.
         """
-        endpoint = f"/assets/{asset_id}/original" if original else f"/assets/{asset_id}/thumbnail"
-        r = self._client.get(endpoint)
+        r = self._client.post("/download/archive", json={"assetIds": [asset_id]})
         if r.status_code >= 400:
-            raise ImmichError(f"Download failed ({r.status_code}): {r.text[:500]}")
+            raise ImmichError(f"Download archive failed ({r.status_code}): {r.text[:500]}")
         dest_path = Path(dest_path)
         dest_path.write_bytes(r.content)
-        logger.debug("download_asset: wrote %d bytes -> %s", len(r.content), dest_path)
+        logger.debug("download_archive: wrote %d bytes -> %s", len(r.content), dest_path)
         return dest_path
+
+    def get_asset(self, asset_id: str) -> dict:
+        """Return the full asset object from ``GET /assets/{id}``."""
+        r = self._client.get(f"/assets/{asset_id}")
+        if r.status_code >= 400:
+            raise ImmichError(f"Get asset failed ({r.status_code}): {r.text[:500]}")
+        return r.json()
+
+    def get_faces(self, asset_id: str) -> list[dict]:
+        """Return face regions for an asset from ``GET /faces?id={id}``."""
+        r = self._client.get("/faces", params={"id": asset_id})
+        if r.status_code >= 400:
+            raise ImmichError(f"Get faces failed ({r.status_code}): {r.text[:500]}")
+        return r.json()
+
+    def get_albums_for_asset(self, asset_id: str) -> list[dict]:
+        """Return albums containing an asset from ``GET /albums?assetId={id}``."""
+        r = self._client.get("/albums", params={"assetId": asset_id})
+        if r.status_code >= 400:
+            raise ImmichError(f"Get albums failed ({r.status_code}): {r.text[:500]}")
+        return r.json()
 
 
 def _iso_now() -> str:

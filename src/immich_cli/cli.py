@@ -6,12 +6,14 @@ import json
 import logging
 import os
 import sys
+import zipfile
 from pathlib import Path
 
 import click
 
 from immich_cli.client import ImmichClient, ImmichError
 from immich_cli.logging_setup import configure_logging, redact_api_key
+from immich_cli.meta_export import generate_meta_export
 from immich_cli.models import Metadata
 
 log = logging.getLogger(__name__)
@@ -260,6 +262,103 @@ def _build_metadata(
     if archive:
         meta.is_archived = True
     return meta
+
+
+def _extract_archive(zip_path: Path, out_dir: Path) -> Path:
+    """Extract a downloaded Immich archive (zip) and return the image path.
+
+    Immich's ``/download/archive`` returns a zip; for a single asset it
+    contains one image file. We extract everything into *out_dir* and return
+    the first non-meta file found (images/videos). If the zip holds more than
+    one candidate we log the full entry list and still return the first.
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(zip_path) as zf:
+        names = zf.namelist()
+        log.debug("download archive entries: %s", names)
+        zf.extractall(out_dir)
+    image_exts = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp",
+                  ".tif", ".tiff", ".heic", ".heif",
+                  ".mp4", ".mov", ".avi", ".mkv", ".webm"}
+    candidates = [
+        out_dir / n for n in names
+        if Path(n).suffix.lower() in image_exts and not Path(n).name.startswith("__MACOSX")
+    ]
+    if not candidates:
+        # Fall back to any file that isn't an OS helper.
+        candidates = [
+            out_dir / n for n in names
+            if not n.startswith("__MACOSX") and not n.endswith("/")
+        ]
+    if not candidates:
+        raise ImmichError(f"Download archive contained no files: {names}")
+    if len(candidates) > 1:
+        log.warning("download archive had %d files; using %s", len(candidates), candidates[0])
+    return candidates[0]
+
+
+@main.command("download")
+@click.argument("asset_id", type=str)
+@click.option(
+    "--out",
+    "out_dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    default=Path("downloads"),
+    show_default=True,
+    help="Directory to write the extracted asset + .meta.json + .xmp into.",
+)
+@click.pass_context
+def download(ctx: click.Context, asset_id: str, out_dir: Path) -> None:
+    """Download ASSET_ID and write its metadata locally.
+
+    Pulls a single asset from Immich (as a zip), extracts the image, then
+    fetches its full metadata (asset object, faces, albums) and writes:
+
+      * <image>.<ext>.meta.json  -- rich, server-shaped metadata
+      * <image>.<ext>.xmp         -- sidecar (stars + people) when present
+
+    This mirrors the desktop app's download structure and is the tool used to
+    inspect what Immich actually stored (e.g. why uploaded faces report 0).
+
+    OPTION PLACEMENT: --out is a COMMAND option (after the asset id). The
+    connection/debug options (--server, --api-key, --verbose, --log) are
+    GLOBAL and go BEFORE the `download` command.
+    """
+    try:
+        with ImmichClient(ctx.obj["server"], ctx.obj["api_key"]) as client:
+            out_dir = Path(out_dir)
+            out_dir.mkdir(parents=True, exist_ok=True)
+            zip_path = out_dir / f"{asset_id}.zip"
+            log.debug("download: fetching archive for %s", asset_id)
+            client.download_archive(asset_id, zip_path)
+            click.echo(f"Downloaded archive: {zip_path}")
+
+            image_path = _extract_archive(zip_path, out_dir)
+            log.debug("download: extracted image -> %s", image_path)
+            click.echo(f"Extracted asset: {image_path.name}")
+
+            asset_data = client.get_asset(asset_id)
+            faces_data = client.get_faces(asset_id)
+            albums_data = client.get_albums_for_asset(asset_id)
+            log.debug(
+                "download: asset type=%s faces=%d albums=%d",
+                asset_data.get("type"), len(faces_data), len(albums_data),
+            )
+
+            meta_path = generate_meta_export(
+                asset_id, asset_data, image_path, faces_data, albums_data
+            )
+            click.echo(f"Wrote metadata: {meta_path}")
+            click.echo(
+                f"Summary: faces={len(faces_data)} albums={len(albums_data)} "
+                f"rating={asset_data.get('exifInfo', {}).get('rating')} "
+                f"favorite={asset_data.get('isFavorite')}"
+            )
+    except ImmichError as exc:
+        log.error("download failed: %s", exc)
+        click.echo(f"ERROR: {exc}", err=True)
+        sys.exit(1)
+    log.debug("download command finished")
 
 
 if __name__ == "__main__":  # pragma: no cover
