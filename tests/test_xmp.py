@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import xml.etree.ElementTree as ET
 
+import pytest
+
 from immich_cli.models import FaceRegion, Metadata
 from immich_cli.xmp import (
     BOM,
@@ -104,7 +106,7 @@ def test_metadata_from_dict_nested_and_flat():
     }
     m = Metadata.from_dict(nested)
     assert m.description == "d"
-    assert m.gps_lat == 1.0
+    assert m.gps_lat == pytest.approx(1.0)
     assert m.tags == ["A/B"]
     assert m.people == ["Zoe"]
     assert m.is_favorite is True
@@ -112,4 +114,4 @@ def test_metadata_from_dict_nested_and_flat():
     # round-trips into xmp dict
     d = m.to_xmp_dict()
     assert d["tags"] == ["A/B"]
-    assert d["gps_lat"] == 1.0
+    assert d["gps_lat"] == pytest.approx(1.0)
