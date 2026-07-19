@@ -26,6 +26,83 @@ logger = logging.getLogger(__name__)
 
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".avi", ".mkv", ".webm", ".m4v"}
 
+# How many leading bytes of a binary (image/video) request/response body to log.
+# Binary bodies are never logged in full — only this head, so the trace shows
+# it is media plus the total size.
+BINARY_HEAD_BYTES = 64
+
+
+def _redact_headers(headers: httpx.Headers) -> str:
+    """Render request/response headers for logging, redacting the API key."""
+    parts = []
+    for name, value in headers.items():
+        if name.lower() == "x-api-key":
+            parts.append(f"{name}: <redacted>")
+        else:
+            parts.append(f"{name}: {value}")
+    return "; ".join(parts)
+
+
+def _body_preview(content: bytes, content_type: str | None) -> str:
+    """Return a body preview honoring the text-vs-binary policy.
+
+    * Text / JSON / XMP: returned in full (no truncation).
+    * Binary (image/video): only the first ``BINARY_HEAD_BYTES`` are shown,
+      plus the total size, so the trace proves media was sent/received.
+    """
+    if content_type and (
+        content_type.startswith("image/")
+        or content_type.startswith("video/")
+        or content_type.startswith("application/octet-stream")
+        or content_type.startswith("multipart/")
+    ):
+        head = content[:BINARY_HEAD_BYTES]
+        try:
+            head_repr = head.decode("utf-8", "replace")
+        except Exception:  # pragma: no cover
+            head_repr = repr(head)
+        return f"<binary {len(content)} bytes; head: {head_repr!r}>"
+    # Text: decode and return in full.
+    try:
+        return content.decode("utf-8", "replace")
+    except Exception:  # pragma: no cover
+        return repr(content)
+
+
+def _log_request(request: httpx.Request) -> None:
+    """HTTPX request hook: trace everything going up."""
+    ct = request.headers.get("content-type")
+    body = request.read()
+    preview = _body_preview(body, ct)
+    logger.debug(
+        "HTTP >>> %s %s\n  headers: %s\n  body: %s",
+        request.method,
+        request.url,
+        _redact_headers(request.headers),
+        preview,
+    )
+
+
+def _log_response(response: httpx.Response) -> None:
+    """HTTPX response hook: trace everything coming down."""
+    # Reading the body also populates ``.elapsed`` (timing) for the log line.
+    body = response.read()
+    ct = response.headers.get("content-type")
+    preview = _body_preview(body, ct)
+    try:
+        elapsed_ms = response.elapsed.total_seconds() * 1000
+    except RuntimeError:
+        elapsed_ms = 0.0
+    logger.debug(
+        "HTTP <<< %s %s -> %d (%.0f ms)\n  headers: %s\n  body: %s",
+        response.request.method,
+        response.request.url,
+        response.status_code,
+        elapsed_ms,
+        _redact_headers(response.headers),
+        preview,
+    )
+
 
 class ImmichError(Exception):
     """Raised for non-2xx Immich API responses."""
@@ -53,6 +130,7 @@ class ImmichClient:
             base_url=self._base_url,
             headers={"X-API-Key": api_key},
             timeout=timeout,
+            event_hooks={"request": [_log_request], "response": [_log_response]},
         )
 
     def __enter__(self) -> ImmichClient:
@@ -109,11 +187,25 @@ class ImmichClient:
 
         # Resolve the sidecar bytes (explicit > generated > none).
         sidecar_bytes: bytes | None = None
+        sidecar_source = "none"
         if sidecar_path is not None:
             sidecar_bytes = Path(sidecar_path).read_bytes()
+            sidecar_source = f"explicit:{sidecar_path}"
         elif metadata is not None and not is_video:
             xmp = generate_xmp_sidecar(str(file_path), metadata.to_xmp_dict())
             sidecar_bytes = xmp.encode("utf-8")
+            sidecar_source = "generated"
+        logger.debug(
+            "upload: file=%s is_video=%s sidecar_source=%s sidecar_bytes=%s",
+            file_path,
+            is_video,
+            sidecar_source,
+            len(sidecar_bytes) if sidecar_bytes else 0,
+        )
+        # Log the generated XMP sidecar text in full (it is text metadata, not
+        # binary media, so per policy it is not truncated).
+        if sidecar_bytes is not None:
+            logger.debug("upload: generated XMP sidecar:\n%s", sidecar_bytes.decode("utf-8"))
         if sidecar_bytes is not None and not sidecar_bytes.startswith(
             "﻿".encode()
         ):

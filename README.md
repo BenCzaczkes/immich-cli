@@ -48,6 +48,33 @@ immich-cli upload photo.jpg --xmp photo.xmp
 
 Set `IMMICH_SERVER` and `IMMICH_API_KEY` env vars to skip the flags.
 
+## Tracing
+
+The CLI can emit an explicit trace of everything that goes up (requests) and
+comes down (responses), plus CLI-level events. Use the global flags:
+
+```bash
+# Mirror the full DEBUG trace to the console (stderr)
+immich-cli --verbose upload IMG_0421.jpg --server ... --api-key ...
+
+# Write the full trace to a file (DEBUG level)
+immich-cli --log upload-trace.log upload IMG_0421.jpg --server ... --api-key ...
+
+# Both at once
+immich-cli --verbose --log upload-trace.log upload IMG_0421.jpg ...
+```
+
+Behavior:
+
+* With neither flag, the CLI is quiet (only errors are shown).
+* Every HTTP request/response is logged with method, URL, headers, status, and
+  timing. The `X-API-Key` header is **redacted**.
+* **Text/JSON bodies are logged in full** (not truncated). **Binary** request/
+  response bodies (images, videos, multipart) log only a small head plus the
+  total size, so the trace proves media was sent/received without dumping it.
+* The generated XMP sidecar is logged as text in full.
+* Logging uses the stdlib `logging` module (no extra dependencies).
+
 ## Development
 
 ```bash

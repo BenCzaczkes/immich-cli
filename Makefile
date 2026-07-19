@@ -11,7 +11,7 @@
 
 UV ?= uv
 
-.PHONY: install test lint format run-help clean
+.PHONY: install test lint format run-help trace clean
 
 install:
 	$(UV) sync
@@ -27,6 +27,9 @@ format:
 
 run-help:
 	$(UV) run immich-cli --help
+
+trace: ## Show full DEBUG trace to console: make trace ARGS="upload img.jpg --server ... --api-key ..."
+	$(UV) run immich-cli --verbose $(ARGS)
 
 clean:
 	rm -rf .ruff_cache .pytest_cache build dist

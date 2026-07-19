@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 import json
+import logging
 import sys
 from pathlib import Path
 
 import click
 
 from immich_cli.client import ImmichClient, ImmichError
+from immich_cli.logging_setup import configure_logging
 from immich_cli.models import Metadata
+
+log = logging.getLogger(__name__)
 
 
 @click.group()
@@ -23,9 +27,28 @@ from immich_cli.models import Metadata
     envvar="IMMICH_API_KEY",
     help="Immich API key (X-API-Key). Defaults to $IMMICH_API_KEY.",
 )
+@click.option(
+    "--verbose",
+    is_flag=True,
+    help="Mirror the full debug trace to the console (stderr).",
+)
+@click.option(
+    "--log",
+    "log_file",
+    type=click.Path(dir_okay=False, path_type=str),
+    default=None,
+    help="Write the full debug trace to this file.",
+)
 @click.pass_context
-def main(ctx: click.Context, server: str | None, api_key: str | None) -> None:
+def main(
+    ctx: click.Context,
+    server: str | None,
+    api_key: str | None,
+    verbose: bool,
+    log_file: str | None,
+) -> None:
     """Upload assets (with XMP metadata) to an Immich server."""
+    configure_logging(verbose=verbose, log_file=log_file)
     if not server or not api_key:
         raise click.UsageError(
             "Both --server and --api-key are required "
@@ -34,6 +57,7 @@ def main(ctx: click.Context, server: str | None, api_key: str | None) -> None:
     ctx.ensure_object(dict)
     ctx.obj["server"] = server
     ctx.obj["api_key"] = api_key
+    log.debug("CLI start: server=%s verbose=%s log_file=%s", server, verbose, log_file)
 
 
 @main.command("upload")
@@ -68,8 +92,23 @@ def upload(
     no_tags: bool,
 ) -> None:
     """Upload FILE to Immich, attaching metadata via an XMP sidecar."""
+    log.debug("upload command: file=%s meta_json=%s xmp=%s", file, meta_json, xmp)
     metadata = _build_metadata(
         meta_json, description, tags, albums, people, gps, rating, favorite, archive
+    )
+    log.debug(
+        "metadata: description=%r tags=%s albums=%s people=%s gps=(%s,%s) "
+        "rating=%s favorite=%s archive=%s face_regions=%d",
+        metadata.description,
+        metadata.tags,
+        metadata.albums,
+        metadata.people,
+        metadata.gps_lat,
+        metadata.gps_lon,
+        metadata.rating,
+        metadata.is_favorite,
+        metadata.is_archived,
+        len(metadata.face_regions),
     )
 
     try:
@@ -77,17 +116,22 @@ def upload(
             result = client.upload(file, metadata=metadata, sidecar_path=xmp)
             asset_id = result.get("assetId") or result.get("id")
             duplicate = result.get("duplicate", False)
+            log.debug("upload result: %s", result)
             click.echo(f"Uploaded: {file.name} -> assetId={asset_id} duplicate={duplicate}")
 
             if not no_tags and metadata.tags:
                 client.apply_tags(asset_id, list(metadata.tags))
+                log.debug("applied %d tag(s)", len(metadata.tags))
                 click.echo(f"Applied {len(metadata.tags)} tag(s).")
 
             if metadata.is_favorite or metadata.rating is not None or metadata.is_archived:
                 client.apply_flags(asset_id, metadata)
+                log.debug("applied flags (favorite/rating/archive)")
     except ImmichError as exc:
+        log.error("upload failed: %s", exc)
         click.echo(f"ERROR: {exc}", err=True)
         sys.exit(1)
+    log.debug("upload command finished")
 
 
 def _build_metadata(
