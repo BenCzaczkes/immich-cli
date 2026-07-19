@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# uv
+.venv/
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.uv/
+
+# OS / editor
+.DS_Store
+*.swp
+
+# Local secrets / outputs
+.env
+*.meta.json
+*.xmp
