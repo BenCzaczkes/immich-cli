@@ -89,4 +89,11 @@ Verified against a live server during smoke tests:
 - Albums application (currently sidecar-only stub), people link enforcement.
 - Faces ingestion fix (likely XMP schema or `POST /faces` investigation).
 - Asset delete command (to clean up test uploads).
-- PyInstaller Windows executable build.
+- **Windows `.exe` build: working via Nuitka** (replaces PyInstaller, which
+  was dropped). `build_windows.py` compiles `src/immich_cli` with
+  `--python-flag=-m` (runs `immich_cli.__main__`) → native `immich-cli.exe`.
+  Dev dep is `nuitka[onefile]` (pulls zstandard for compression). `[tool.nuitka]`
+  in pyproject.toml + `docs/windows-build.md`. **Must run on Windows with MSVC**
+  — Nuitka can't cross-compile a Windows exe from Linux. Verified: `__main__.exe`
+  built and `--help` ran correctly; approach B (package dir + -m) adopted for
+  proper `immich-cli.exe` naming.

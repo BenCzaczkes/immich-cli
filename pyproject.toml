@@ -25,7 +25,7 @@ dev = [
     "pymarkdownlnt>=0.9.38",
     "ruff>=0.15.12",
     "ty>=0.0.33",
-    "pyinstaller>=6.21.0",
+    "nuitka[onefile]>=2.6.0",
     "pillow>=10.0.0",
 ]
 
@@ -53,3 +53,15 @@ module-root = "src"
 
 [tool.uv]
 package = true
+
+# Nuitka Windows build config. The actual compile runs on Windows (MSVC).
+# `python build_windows.py` reads these via `python -m nuitka` automatically.
+[tool.nuitka]
+# Entry: package dir compiled with -m (runs immich_cli.__main__), output
+# named immich-cli.exe. Mirrors build_windows.py.
+output-filename = "immich-cli"
+python-flag = "-m"
+include-package = ["immich_cli", "click", "httpx", "httpcore", "certifi"]
+include-package-data = ["certifi", "httpx"]
+windows-console-mode = "force"
+assume-yes-for-downloads = true
