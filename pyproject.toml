@@ -58,10 +58,11 @@ package = true
 # `python build_windows.py` reads these via `python -m nuitka` automatically.
 [tool.nuitka]
 # Entry: package dir compiled with -m (runs immich_cli.__main__), output
-# named immich-cli.exe. Mirrors build_windows.py.
+# named immich-cli.exe. Mirrors build_windows.py. The entry package itself is
+# not listed in include-package (it's given via the command-line path).
 output-filename = "immich-cli"
 python-flag = "-m"
-include-package = ["immich_cli", "click", "httpx", "httpcore", "certifi"]
+include-package = ["click", "httpx", "httpcore", "certifi"]
 include-package-data = ["certifi", "httpx"]
 windows-console-mode = "force"
 assume-yes-for-downloads = true

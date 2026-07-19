@@ -40,10 +40,12 @@ ENTRY_PACKAGE = "src/immich_cli"
 OUTPUT_FILENAME = "immich-cli"
 OUTPUT_DIR = Path("dist")
 
-# Packages Nuitka must follow into the binary. httpx pulls in certificates and
-# optional trust-store machinery; click is the CLI framework.
+# Packages Nuitka must follow into the binary. The entry package
+# (src/immich_cli) is already given on the command line, so we don't list it
+# here — re-including it triggers a benign "already included" warning. httpx
+# pulls in certificates and optional trust-store machinery; click is the CLI
+# framework.
 INCLUDE_PACKAGES = [
-    "immich_cli",
     "click",
     "httpx",
     "httpcore",
