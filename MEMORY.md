@@ -179,3 +179,48 @@ Verified against a live server during smoke tests:
   `DELETE /people/{id}`, `GET /faces`, `DELETE /faces/{id}`, `GET /faces?id=`,
   `POST /download/archive`, `POST /jobs/{id}/stop` (job control — desktop app
   can stop jobs via API; on Windows the user may just pause microservices).
+
+## Faces experiment — RESULT (2026-07-20, Windows run)
+
+- **XMP sidecar IS ingested on upload.** User uploaded ONE of the two test
+  pictures (with the `.xmp` sidecar containing normalized MWG-RS regions +
+  `iptc-core:PersonInImage` names), after the `check_people_cleared.py` script
+  confirmed the server was clear. With ALL jobs stopped (face generation off),
+  Immich **found the faces from the sidecar** and kept their names — almost
+  certainly because the names live in the XMP (`mwg-rs:Name` /
+  `iptc-core:PersonInImage`), so no separate DB memory was needed.
+- **DUPLICATE-FACES problem (root cause found):** user then let Immich run its
+  background jobs. Immich's ML face-detection re-detected the SAME two faces
+  and added **two NEW unnamed faces at the identical positions**. Result: the
+  one picture now shows **4 faces (2 named-from-XMP + 2 unnamed-from-ML)** when
+  it physically has only 2. Immich does NOT dedupe sidecar-provided regions
+  against its own ML detection — it treats them as independent. (Immich isn't
+  "confused"/erroring; it just has redundant face records.)
+- **Next step user is taking:** re-download the asset to inspect the
+  round-trip (does the download now return 4 face_regions? do the named ones
+  carry `source_type` distinguishing sidecar vs ML?). Not yet observed.
+- **Implication for the `faces: 0` mystery:** SOLVED on the ingest question —
+  normalized MWG-RS regions in the sidecar DO get ingested (when jobs are
+  stopped, at least). The remaining pain is Immich's ML re-detection creating
+  duplicates, not our XMP being ignored. So the earlier "server ignores XMP"
+  hypothesis is WRONG; the real issue is dedupe/merge on Immich's side.
+- **Open dimension question still stands:** sidecar used
+  `AppliedToDimensions` = original (2560×3412) and was ingested fine, so the
+  preview-vs-original mismatch did NOT block ingestion this time. Keep watching
+  whether ML-generated boxes (preview-sized) vs sidecar boxes (original-sized)
+  cause coordinate drift on the 4-face download.
+
+## Design note — XMP is source of truth, not the JSON export
+
+- **User directive:** prefer keeping our metadata in the **XMP sidecar**, NOT
+  the JSON `.meta.json` export. "We need a database of some sort, but one that
+  can go UP to Immich — and from what I see, all the JSON gives us is
+  heartache." The JSON (`MetaExport` v1) is useful for inspection/round-trip
+  debugging but should NOT be the system of record we rely on.
+- **Rationale observed:** the XMP sidecar is what Immich actually ingests
+  (faces + names came through from XMP alone). The JSON is a derived snapshot
+  that doesn't round-trip cleanly and causes more confusion than value as a
+  store. So: treat XMP as canonical; JSON = debug/export only.
+- **Action item (not yet done):** reconsider whether `meta_export` /
+  `--meta-json` should remain a primary output, or be demoted to a debug aid.
+  No code change yet — note for next session.
