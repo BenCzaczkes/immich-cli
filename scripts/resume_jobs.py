@@ -20,7 +20,9 @@ import sys
 
 import httpx
 
-# Same set the desktop app pauses/resumes (immich_desktop/upload/executor.py).
+# Same set the desktop app pauses/resumes (immich_desktop/upload/executor.py),
+# PLUS the sidecar-processing queues (SidecarCheck / SidecarWrite /
+# SidecarQueueAll) so they are resumed too. See pause_jobs.py for context.
 HEAVY_JOBS = (
     "facialRecognition",
     "faceDetection",
@@ -28,6 +30,9 @@ HEAVY_JOBS = (
     "thumbnailGeneration",
     "metadataExtraction",
     "videoConversion",
+    "SidecarCheck",
+    "SidecarWrite",
+    "SidecarQueueAll",
 )
 
 

@@ -23,7 +23,11 @@ import sys
 
 import httpx
 
-# Same set the desktop app pauses (immich_desktop/upload/executor.py).
+# Same set the desktop app pauses (immich_desktop/upload/executor.py),
+# PLUS the sidecar-processing queues Immich runs independently of
+# metadataExtraction (SidecarCheck scans for sidecars, SidecarWrite ingests
+# them, SidecarQueueAll re-queues all assets for sidecar processing). Pausing
+# these stops Immich from reading the XMP sidecar on its own.
 HEAVY_JOBS = (
     "facialRecognition",
     "faceDetection",
@@ -31,6 +35,9 @@ HEAVY_JOBS = (
     "thumbnailGeneration",
     "metadataExtraction",
     "videoConversion",
+    "SidecarCheck",
+    "SidecarWrite",
+    "SidecarQueueAll",
 )
 
 
