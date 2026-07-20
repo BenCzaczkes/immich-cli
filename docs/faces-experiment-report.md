@@ -210,6 +210,48 @@ state) contains **4 `<rdf:li>` regions** — Alfred ×2, Benjamin ×2 — matchi
 the 4 server faces exactly. So the doubling is faithfully round-tripped:
 2 in → 4 out → 4 back.
 
+### 5.4 Run 4 — DEFINITIVE run, ALL jobs released (the 6-face result)
+
+After Run 3, the user released **all** remaining job queues (facial
+recognition, face detection, smart search, everything). Immich's ML then ran.
+The same asset (`6dd908df-…`) was downloaded a **third** time (trace 03:26).
+
+`GET /faces?id=` now returned **6 faces**:
+
+| # | sourceType | Box (width×height) | Person |
+|---|---|---|---|
+| 1 | **machine-learning** | (345,353)→(754,940) @ **1440×1919** | `30e42f64` (name: "") |
+| 2 | exif | (613,627)→(1340,1671) @ 2560×3412 | `9c6129d2` (Alfred Czaczkes) |
+| 3 | exif | (613,627)→(1340,1671) @ 2560×3412 | `9c6129d2` (Alfred Czaczkes) |
+| 4 | **machine-learning** | (852,499)→(1144,876) @ **1440×1919** | `9431a946` (name: "") |
+| 5 | exif | (1514,887)→(2033,1557) @ 2560×3412 | `c628ebb6` (Benjamin Czaczkes) |
+| 6 | exif | (1514,887)→(2033,1557) @ 2560×3412 | `c628ebb6` (Benjamin Czaczkes) |
+
+Reading it:
+
+- The **4 exif faces from Run 3 persisted unchanged** (Alfred ×2, Benjamin ×2,
+  same IDs `bd865cc9`/`acf802d4`/`ab46ed20`/`c097d474`, same original-sized
+  boxes). The sidecar doubling was NOT undone by releasing jobs.
+- ML added **exactly 2 new unnamed faces** — one per real person — detected on
+  the **1440×1919 preview** (the same resized copy Immich uses for ML). Their
+  boxes match the *original* investigation's downloaded faces precisely:
+  Alfred (345,353)→(754,940) and Benjamin (852,499)→(1144,876) are identical to
+  the very first `00b19997-…` download's boxes. So ML re-found the same two
+  faces we already had, but as **new unnamed people** (`30e42f64`, `9431a946`).
+- Net: 2 real faces → **6 stored** (4 exif-named-doubled + 2 ML-unnamed).
+  `people` list grew to 4 (2 named + 2 unnamed ML). Tags/rating/GPS/description
+  all still correct.
+
+This is exactly the user's hunch: the first (exif) set was duplicated once by
+Immich's sidecar ingestion (Run 3), and releasing ML added a second, unnamed
+copy of each face on the preview-sized image. The exif set was not re-doubled
+by ML — it's a clean 4 + 2.
+
+> Note: `downloads/` now holds two copies of this asset (the 02:09 Run-3
+> download was renamed to `19580128 - Copy.*`, and the 02:26 Run-4 download
+> overwrote `19580128.jpg*``). `downloads/` is gitignored, so only the latest
+> is in the working tree; the trace.log retains all three runs.
+
 ---
 
 ## 6. Conclusions so far
@@ -235,9 +277,9 @@ the 4 server faces exactly. So the doubling is faithfully round-tripped:
    preview-sized coordinates — the boxes round-trip accurately against the
    original image dimensions.
 
-6. **Albums were not applied in Run 3** (the CLI run was upload+download only,
-   no `--album`). The sidecar does carry `immich:albums`, but we didn't verify
-   album ingestion this run.
+6. **Albums were not applied in Run 3/4** (the CLI run was upload+download
+   only, no `--album`). The sidecar does carry `immich:albums`, but we didn't
+   verify album ingestion these runs.
 
 ---
 
@@ -252,6 +294,11 @@ the 4 server faces exactly. So the doubling is faithfully round-tripped:
   Immich ingestion, so likely yes — but unverified.
 - **Can we de-dupe on our side?** After download we could collapse faces with
   identical boxes+person before re-exporting, but that masks rather than fixes.
+- **Final face count on a 2-face image: 6.** Breakdown = 4 exif (sidecar
+  regions doubled once by Immich's ingestion) + 2 machine-learning (unnamed,
+  preview-sized, added when ML jobs run). The exif set is named and
+  original-sized; the ML set is unnamed and preview-sized. Neither Immich nor
+  our sidecar de-duplicates them.
 - **Album ingestion** still untested on the blank server (run `apply_albums`
   / include `immich:albums` and verify).
 - **ML path:** if `faceDetection`/`facialRecognition` are *also* enabled, do we

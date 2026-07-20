@@ -244,6 +244,24 @@ Verified against a live server during smoke tests:
   sidecar needs the metadata/sidecar job to run, and (b) when ML also runs it
   adds MORE unnamed dupes. The pure-sidecar path now shows 4 faces but all
   named/exif, just doubled by Immich.
+
+### Run 4 (DONE): ALL jobs released -> 6 faces
+
+- After Run 3 the user released ALL remaining queues (facialRecognition,
+  faceDetection, smartSearch, ...). ML ran; same asset re-downloaded (trace
+  03:26). `GET /faces` -> **6 faces**: the 4 exif (Alfred×2, Benjamin×2, same
+  IDs/boxes as Run 3, PERSISTED) + **2 NEW machine-learning** faces, unnamed,
+  on the 1440×1919 preview — Alfred (345,353)->(754,940), Benjamin
+  (852,499)->(1144,876). Those ML boxes are IDENTICAL to the very first
+  `00b19997-...` download's boxes (Immich's preview-size ML detection). So ML
+  re-found the 2 real faces as 2 new unnamed people; the exif set was NOT
+  re-doubled. Net: 2 real faces -> **6 stored** (4 exif-named-doubled + 2
+  ML-unnamed). `people` grew to 4 (2 named + 2 unnamed ML). Tags/rating/GPS/
+  description still correct. This matches the user's hunch exactly.
+- **Full picture:** 2 real faces become 6 = Immich doubles the sidecar regions
+  once (exif) AND ML adds one unnamed copy each (preview-sized). Neither side
+  de-dupes. The exif-doubling is the sidecar-ingestion bug to chase; the ML
+  additions are expected Immich behaviour (no merge with exif faces).
 - **Trace file:** `trace.log` in repo root captures Run 2 (upload + download
   with all jobs paused). Note the downloaded `.meta.json` written on Windows is
   NOT in this Linux repo (the old `downloads/19580128.jpg.meta.json` here is the
