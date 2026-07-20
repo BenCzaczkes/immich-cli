@@ -93,12 +93,19 @@ Verified against a live server during smoke tests:
   (downloads/19580128.jpg.meta.json): faces ARE stored server-side
   (face_regions=2, valid PIXEL boxes, source_type=machine-learning, named
   people). rating=5 / favorite=True / album='My Album' all round-trip. So the
-  `faces: 0` bug is on the UPLOAD / XMP-WRITE side, not download. Next thread:
-  compare xmp.py::generate_mwg_regions output (normalized center-based MWG-RS
-  Areas) against what Immich's ML stores (pixel boxes + AppliedToDimensions) —
-  likely a schema/normalization or namespace mismatch the server ignores.
-  Note: downloaded boxes are pixel coords; upload path normalizes by
-  image_width/height — verify the round-trip is consistent.
+  `faces: 0` bug is on the UPLOAD / XMP-WRITE side, not download.
+  **CORRECTED (download investigation):** the download-side XMP is actually
+  MWG-correct and round-trips fine. The asymmetry: `generate_mwg_regions`
+  (xmp.py) sets `AppliedToDimensions` = the ORIGINAL asset size (e.g. 2560×3412)
+  but normalizes each box by the face's per-region `image_width/height`, which
+  on download is the 1440×1919 RESIZED PREVIEW Immich ran ML on. The downloaded
+  .meta.json keeps raw pixel boxes tied to 1440×1919; the .xmp re-normalizes to
+  2560×3412. Both internally consistent. So the upload XMP is spec-correct —
+  the `faces: 0` gap is almost certainly SERVER-SIDE: Immich's ML face pipeline
+  detects on the 1440 preview and stores faces against that preview size, and
+  on upload either ignores MWG-RS regions from sidecars or can't reconcile
+  them against the preview it processes. Open question: should
+  `AppliedToDimensions` match the PREVIEW (1440×1919), not the original?
 - Asset delete command (to clean up test uploads).
 
 ## Recently built
@@ -134,3 +141,41 @@ Verified against a live server during smoke tests:
   static compile, so after `src/` changes rebuild it with
   `uv run ./build_windows.py` if you use the exe; for testing, `uv run` uses
   live source and needs no rebuild. `downloads/` is gitignored (test output).
+
+## Faces investigation — state + next experiment (2026-07-20)
+
+- **Two test images deleted + people cleared (VERIFIED CLEAN):** the user
+  deleted `19580128.jpg` and `19580328.jpg` (asset IDs
+  `00b19997-969d-42c8-b320-03a215338044`, `02cee462-531e-475c-97d0-c50eba4f9518`)
+  and their people from the server. `scripts/check_people_cleared.py` (READ-ONLY;
+  checks `GET /people` + `GET /faces` for the two person IDs/names) printed
+  nothing found → CLEARED. Person IDs:
+  - Alfred Czaczkes  → `020b92cd-ac8b-487a-b726-e79706fc81d1`
+  - Benjamin Czaczkes → `13df863a-20fb-490a-8851-734a0cfc80ae`
+- **Next experiment (user running on WINDOWS):** re-upload the two .jpg files
+  from `downloads/` WITH their `.xmp` sidecars, after STOPPING the server's
+  background jobs (face-detection / metadata-extraction) so Immich can't
+  overwrite what we send. Goal: see if `GET /faces?id={asset}` shows
+  `faces > 0` and, if so, what `source_type` they carry (sidecar-ingested vs
+  server ML). The user prefers to do this on Windows (can pause jobs via admin
+  UI / docker pause microservices). NOTE: Linux side has no further action.
+- **Experiment caveats to watch:**
+  - Re-uploading the SAME .jpg (same checksum) may be deduplicated as a
+    duplicate, not a fresh asset → use copies / slightly changed exports.
+  - Even if faces appear, check `source_type` + whether person IDs/names match
+    the sidecar, to prove the sidecar was ingested (not server ML).
+  - Open dimension question: downloaded faces are stored against the 1440×1919
+    preview; our upload XMP uses `AppliedToDimensions` = original (2560×3412).
+    If sidecar regions ARE honored, test whether `AppliedToDimensions` should
+    instead match the preview size Immich processes.
+- **Ratings/stars note:** correctly captured on download — nested under
+  `exif.rating` (NOT a top-level key) and exported as `<xmp:Rating>` in the
+  XMP sidecar. 19580128 had rating=5 (exported); 19580328 had rating=null
+  (correctly omitted). The open issue is UPLOAD-side: Immich's async
+  metadata-extraction overwrites `rating` from file EXIF, so a
+  `PUT /assets/{id}` rating returns null. To survive upload, the file itself
+  must carry the rating (XMP `<xmp:Rating>` feeds ExifTool/Immich on ingest).
+- **Useful endpoints (from OpenAPI):** `GET /people`, `GET /people/{id}`,
+  `DELETE /people/{id}`, `GET /faces`, `DELETE /faces/{id}`, `GET /faces?id=`,
+  `POST /download/archive`, `POST /jobs/{id}/stop` (job control — desktop app
+  can stop jobs via API; on Windows the user may just pause microservices).
