@@ -23,11 +23,12 @@ import sys
 
 import httpx
 
-# Same set the desktop app pauses (immich_desktop/upload/executor.py),
-# PLUS the sidecar-processing queues Immich runs independently of
-# metadataExtraction (SidecarCheck scans for sidecars, SidecarWrite ingests
-# them, SidecarQueueAll re-queues all assets for sidecar processing). Pausing
-# these stops Immich from reading the XMP sidecar on its own.
+# Same set the desktop app pauses (immich_desktop/upload/executor.py).
+# NOTE: there is NO pausable "sidecar" job queue — SidecarCheck/SidecarWrite/
+# SidecarQueueAll appear in the OpenAPI spec but are NOT valid PUT /jobs/{name}
+# queue names (the server rejects them with 400 "invalid_value"). The valid
+# enum is exactly: thumbnailGeneration, metadataExtraction, videoConversion,
+# faceDetection, facialRecognition, smartSearch, (duplicateDetection, ...).
 HEAVY_JOBS = (
     "facialRecognition",
     "faceDetection",
@@ -35,9 +36,6 @@ HEAVY_JOBS = (
     "thumbnailGeneration",
     "metadataExtraction",
     "videoConversion",
-    "SidecarCheck",
-    "SidecarWrite",
-    "SidecarQueueAll",
 )
 
 
