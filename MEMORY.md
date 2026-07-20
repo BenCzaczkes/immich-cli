@@ -218,19 +218,32 @@ Verified against a live server during smoke tests:
   metadataExtraction+SidecarWrite run should ingest the sidecar's named faces
   + tags/GPS/rating WITHOUT adding ML unnamed duplicates.
 
-### Run 3 (PLANNED): metadata extraction ON, analysis OFF
+### Run 3 (DONE, DEFINITIVE — blank server): metadata extraction ON, ML OFF
 
-- User will release ONLY `metadataExtraction` (+ sidecar) but keep
-  faceDetection/facialRecognition/smartSearch paused, then re-download. Predicted:
-  download shows GPS/date/rating/description/dimensions/tags/albums/PersonInImage
-  + the MWG-RS faces from the sidecar, but NO ML unnamed faces. This would
-  confirm the sidecar is ingested by metadataExtraction/SidecarWrite and that
-  ML is solely what creates the duplicates. NOT YET OBSERVED — document result
-  here when available.
-- **Key takeaway so far:** the upload-side `faces: 0` issue is NOT "server
-  ignores XMP" — it is that sidecar ingestion is a background job, and when ML
-  jobs also run they add duplicate unnamed faces. The real fix target is
-  preventing/merging the ML duplicates, not the sidecar itself.
+- User physically deleted + recreated the Immich server (truly blank, no prior
+  memory). Uploaded `New/19580128.jpg` WITH sidecar (asset `6dd908df-...`), then
+  released ONLY `metadataExtraction` (sidecar ingest) but kept
+  faceDetection/facialRecognition/smartSearch PAUSED. Re-downloaded.
+- **RESULT (downloads/19580128.jpg.meta.json, trace 03:09):** sidecar FULLY
+  ingested — width/height 2560×3412, date, GPS, description, **rating=5**,
+  tags [Benjamin, Alfred] (server-created), people [Alfred+Benjamin]. `GET
+  /faces` → **4 faces, ALL `sourceType:"exif"`** linked to the named people
+  (NO ML unnamed faces — prediction confirmed). BUT each sidecar face is
+  **DOUBLED**: Alfred box (613,627)->(1340,1671) appears twice, Benjamin
+  (1514,887)->(2033,1557) twice. Source sidecar had exactly 2 regions, server
+  returned 4 → **Immich doubles sidecar faces server-side** (exif-source dup,
+  not ML). Boxes correctly original-sized (2560×3412), matching sidecar
+  normalized centers. albums=[] (no --album run this time).
+- **Conclusion:** the XMP sidecar IS the source of truth and IS ingested (by
+  metadataExtraction/sidecar job, not synchronously). Faces stored as exif,
+  named, correct coords. Remaining blocker: **Immich duplicates each sidecar
+  face** (2 real -> 4 stored). Original-sized AppliedToDimensions is correct
+  (no switch to preview needed). Full narrative in
+  docs/faces-experiment-report.md.
+- **Key takeaway:** `faces: 0` was never "server ignores XMP" — it was (a)
+  sidecar needs the metadata/sidecar job to run, and (b) when ML also runs it
+  adds MORE unnamed dupes. The pure-sidecar path now shows 4 faces but all
+  named/exif, just doubled by Immich.
 - **Trace file:** `trace.log` in repo root captures Run 2 (upload + download
   with all jobs paused). Note the downloaded `.meta.json` written on Windows is
   NOT in this Linux repo (the old `downloads/19580128.jpg.meta.json` here is the
