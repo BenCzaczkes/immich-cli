@@ -180,30 +180,62 @@ Verified against a live server during smoke tests:
   `POST /download/archive`, `POST /jobs/{id}/stop` (job control — desktop app
   can stop jobs via API; on Windows the user may just pause microservices).
 
-## Faces experiment — RESULT (2026-07-20, Windows run)
+## Faces experiment — RESULT (2026-07-20, Windows runs)
 
-- **XMP sidecar IS ingested on upload.** User uploaded ONE of the two test
-  pictures (with the `.xmp` sidecar containing normalized MWG-RS regions +
-  `iptc-core:PersonInImage` names), after the `check_people_cleared.py` script
-  confirmed the server was clear. With ALL jobs stopped (face generation off),
-  Immich **found the faces from the sidecar** and kept their names — almost
-  certainly because the names live in the XMP (`mwg-rs:Name` /
-  `iptc-core:PersonInImage`), so no separate DB memory was needed.
-- **DUPLICATE-FACES problem (root cause found):** user then let Immich run its
-  background jobs. Immich's ML face-detection re-detected the SAME two faces
-  and added **two NEW unnamed faces at the identical positions**. Result: the
-  one picture now shows **4 faces (2 named-from-XMP + 2 unnamed-from-ML)** when
-  it physically has only 2. Immich does NOT dedupe sidecar-provided regions
-  against its own ML detection — it treats them as independent. (Immich isn't
-  "confused"/erroring; it just has redundant face records.)
-- **Next step user is taking:** re-download the asset to inspect the
-  round-trip (does the download now return 4 face_regions? do the named ones
-  carry `source_type` distinguishing sidecar vs ML?). Not yet observed.
-- **Implication for the `faces: 0` mystery:** SOLVED on the ingest question —
-  normalized MWG-RS regions in the sidecar DO get ingested (when jobs are
-  stopped, at least). The remaining pain is Immich's ML re-detection creating
-  duplicates, not our XMP being ignored. So the earlier "server ignores XMP"
-  hypothesis is WRONG; the real issue is dedupe/merge on Immich's side.
+### Run 1 (jobs stopped, then all jobs released) — EARLIER, PARTIALLY WRONG
+
+- **Earlier read was INCORRECT.** First Windows run: uploaded one picture with
+  the XMP sidecar, jobs stopped, saw faces; then released jobs and saw 4 faces
+  (2 named + 2 unnamed). We concluded "XMP sidecar IS ingested when jobs are
+  stopped." **Run 2 below disproves that** — see correction.
+- **DUPLICATE-FACES problem (still valid):** releasing jobs made Immich's ML
+  face-detection re-detect the same two faces as 2 NEW unnamed faces at the
+  identical positions → 4 faces on a 2-face picture. Immich does NOT dedupe
+  sidecar-provided regions against its own ML detection. Root cause of the
+  duplicates is the ML re-detection, independent of the sidecar.
+
+### Run 2 (CLEAN: ALL 9 job queues paused) — 2026-07-20, trace.log
+
+- Uploaded `19580128.jpg` WITH auto-discovered `.xmp` sidecar (full correct
+  XMP: tags, album, GPS, xmp:Rating=5, description, PersonInImage Alfred+
+  Benjamin, MWG-RS regions AppliedToDimensions=2560×3412). Server 201
+  `{"id":"6dd908df-...","status":"created"}`. Then (with ALL jobs paused)
+  downloaded it. **Result: asset came back EMPTY:**
+  - `GET /assets/{id}` exifInfo: exifImageWidth/Height NULL, dateTimeOriginal
+    NULL, lat/long NULL, description "", rating NULL, city/state/country NULL;
+    asset `width`/`height` NULL; `tags: []`, `people: []`; `resized: true`,
+    `hasMetadata: true`.
+  - `GET /faces?id=` → `[]` (0 faces). `GET /albums?assetId=` → `[]` (0 albums).
+- **CORRECTION of Run-1 conclusion:** the XMP sidecar is NOT ingested
+  synchronously on upload. With all jobs paused, NOTHING is extracted — not
+  even the sidecar. So sidecar (and EXIF) ingestion is done by BACKGROUND
+  JOBS, not at upload time. Run 1's "faces seen with jobs stopped" must have
+  had a job still running (or were ML faces from a prior state). **The sidecar
+  path is `metadataExtraction` / `SidecarWrite`, which only run as jobs.**
+- **Implication:** there is NO way to make Immich apply the sidecar without
+  running at least the metadata/sidecar jobs. Pausing everything = empty asset.
+  Pausing only ML (faceDetection/facialRecognition/smartSearch) but letting
+  metadataExtraction+SidecarWrite run should ingest the sidecar's named faces
+  + tags/GPS/rating WITHOUT adding ML unnamed duplicates.
+
+### Run 3 (PLANNED): metadata extraction ON, analysis OFF
+
+- User will release ONLY `metadataExtraction` (+ sidecar) but keep
+  faceDetection/facialRecognition/smartSearch paused, then re-download. Predicted:
+  download shows GPS/date/rating/description/dimensions/tags/albums/PersonInImage
+  + the MWG-RS faces from the sidecar, but NO ML unnamed faces. This would
+  confirm the sidecar is ingested by metadataExtraction/SidecarWrite and that
+  ML is solely what creates the duplicates. NOT YET OBSERVED — document result
+  here when available.
+- **Key takeaway so far:** the upload-side `faces: 0` issue is NOT "server
+  ignores XMP" — it is that sidecar ingestion is a background job, and when ML
+  jobs also run they add duplicate unnamed faces. The real fix target is
+  preventing/merging the ML duplicates, not the sidecar itself.
+- **Trace file:** `trace.log` in repo root captures Run 2 (upload + download
+  with all jobs paused). Note the downloaded `.meta.json` written on Windows is
+  NOT in this Linux repo (the old `downloads/19580128.jpg.meta.json` here is the
+  earlier 2026-07-19 Linux download, asset `00b19997-...`, not Run 2's
+  `6dd908df-...`).
 - **Open dimension question still stands:** sidecar used
   `AppliedToDimensions` = original (2560×3412) and was ingested fine, so the
   preview-vs-original mismatch did NOT block ingestion this time. Keep watching

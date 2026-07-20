@@ -1,0 +1,90 @@
+2026-07-20T02:52:57.704771 DEBUG    immich_cli.cli: command line:.\src\immich_cli\__main__.py --log trace.log upload C:\PD\0Active\New\19580128.jpg  [IMMICH_API_KEY env present]
+2026-07-20T02:52:57.704771 DEBUG    immich_cli.cli: CLI start: server=http://127.0.0.1:2283/api verbose=False log_file=trace.log
+2026-07-20T02:52:57.704771 DEBUG    immich_cli.cli: upload command: file=C:\PD\0Active\New\19580128.jpg meta_json=None xmp=None
+2026-07-20T02:52:57.704771 DEBUG    immich_cli.cli: auto-discovered XMP sidecar: C:\PD\0Active\New\19580128.jpg.xmp
+2026-07-20T02:52:57.704771 DEBUG    immich_cli.cli: metadata: description='' tags=[] albums=[] people=[] gps=(None,None) rating=None favorite=False archive=False face_regions=0
+2026-07-20T02:52:57.977186 DEBUG    immich_cli.client: upload: file=C:\PD\0Active\New\19580128.jpg is_video=False sidecar_source=explicit:C:\PD\0Active\New\19580128.jpg.xmp sidecar_bytes=3069
+2026-07-20T02:52:57.977186 DEBUG    immich_cli.client: upload: generated XMP sidecar:
+﻿<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
+<x:xmpmeta x:xmptk="Immich CLI" xmlns:x="adobe:ns:meta/" xmlns:xmp="http://ns.adobe.com/xap/1.0/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+ <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+  <rdf:Description rdf:about=""
+    xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:immich="https://immich.app/schema/1.0/" xmlns:exif="http://ns.adobe.com/exif/1.0/" xmlns:iptc-core="http://iptc.org/std/Iptc4xmpCore/1.0/" xmlns:photoshop="http://ns.adobe.com/photoshop/1.0/" xmlns:mwg-rs="http://www.metadataworkinggroup.com/schemas/regions/" xmlns:stDim="http://ns.adobe.com/xap/1.0/sType/Dimensions#" xmlns:stArea="http://ns.adobe.com/xmp/sType/Area#">
+   <dc:subject>
+    <rdf:Bag>
+     <rdf:li>Czaczkes/Benjamin</rdf:li>
+     <rdf:li>Czaczkes/Alfred</rdf:li>
+    </rdf:Bag>
+   </dc:subject>
+   <immich:albums>
+    <rdf:Bag>
+     <rdf:li>My Album</rdf:li>
+    </rdf:Bag>
+   </immich:albums>
+   <exif:GPSLatitude>31,47,35.7468</exif:GPSLatitude>
+   <exif:GPSLatitudeRef>N</exif:GPSLatitudeRef>
+   <exif:GPSLongitude>35,12,59.6808</exif:GPSLongitude>
+   <exif:GPSLongitudeRef>E</exif:GPSLongitudeRef>
+   <photoshop:City>Wadi al-Joz</photoshop:City>
+   <iptc-core:Location>Wadi al-Joz</iptc-core:Location>
+   <photoshop:State>West Bank</photoshop:State>
+   <photoshop:Country>State of Palestine</photoshop:Country>
+   <exif:DateTimeOriginal>1959-01-28T10:00:00+00:00</exif:DateTimeOriginal>
+   <xmp:Rating>5</xmp:Rating>
+   <dc:description>
+    <rdf:Alt>
+     <rdf:li xml:lang="x-default">9 month old me and my dad</rdf:li>
+    </rdf:Alt>
+   </dc:description>
+   <iptc-core:PersonInImage>
+    <rdf:Bag>
+     <rdf:li>Alfred Czaczkes</rdf:li>
+     <rdf:li>Benjamin Czaczkes</rdf:li>
+    </rdf:Bag>
+   </iptc-core:PersonInImage>
+   <mwg-rs:Regions xmlns:mwg-rs="http://www.metadataworkinggroup.com/schemas/regions/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:stArea="http://ns.adobe.com/xmp/sType/Area#" xmlns:stDim="http://ns.adobe.com/xap/1.0/sType/Dimensions#" rdf:parseType="Resource"><mwg-rs:AppliedToDimensions rdf:parseType="Resource"><stDim:w>2560</stDim:w><stDim:h>3412</stDim:h><stDim:unit>pixel</stDim:unit></mwg-rs:AppliedToDimensions><mwg-rs:RegionList><rdf:Bag><rdf:li rdf:parseType="Resource"><mwg-rs:Name>Alfred Czaczkes</mwg-rs:Name><mwg-rs:Type>Face</mwg-rs:Type><mwg-rs:Area rdf:parseType="Resource"><stArea:x>0.381597</stArea:x><stArea:y>0.336894</stArea:y><stArea:w>0.284028</stArea:w><stArea:h>0.305888</stArea:h><stArea:unit>normalized</stArea:unit></mwg-rs:Area></rdf:li><rdf:li rdf:parseType="Resource"><mwg-rs:Name>Benjamin Czaczkes</mwg-rs:Name><mwg-rs:Type>Face</mwg-rs:Type><mwg-rs:Area rdf:parseType="Resource"><stArea:x>0.693056</stArea:x><stArea:y>0.358260</stArea:y><stArea:w>0.202778</stArea:w><stArea:h>0.196456</stArea:h><stArea:unit>normalized</stArea:unit></mwg-rs:Area></rdf:li></rdf:Bag></mwg-rs:RegionList></mwg-rs:Regions>
+  </rdf:Description>
+ </rdf:RDF>
+</x:xmpmeta>
+<?xpacket end="w"?>
+2026-07-20T02:52:57.977186 DEBUG    immich_cli.client: HTTP >>> POST http://127.0.0.1:2283/api/assets
+  headers: host: 127.0.0.1:2283; accept: */*; accept-encoding: gzip, deflate, zstd; connection: keep-alive; user-agent: python-httpx/0.28.1; x-api-key: <redacted>; content-length: 1891235; content-type: multipart/form-data; boundary=4ab47c12dc24f69fdcd49f7eba134228
+  body: <binary 1891235 bytes; head: '--4ab47c12dc24f69fdcd49f7eba134228\r\nContent-Disposition: form-da'>
+2026-07-20T02:52:58.128704 DEBUG    immich_cli.client: HTTP <<< POST http://127.0.0.1:2283/api/assets -> 201 (137 ms)
+  headers: x-powered-by: Express; x-correlation-id: l8i5t0so; content-type: application/json; charset=utf-8; content-length: 64; etag: "40-3e+apF94UTjnR7U+lDmcGcVjpiQ"; vary: Accept-Encoding; date: Mon, 20 Jul 2026 01:52:58 GMT; connection: keep-alive; keep-alive: timeout=5
+  body: {"id":"6dd908df-b133-42b8-a0a0-31e81d2ff40d","status":"created"}
+2026-07-20T02:52:58.128704 DEBUG    immich_cli.cli: upload result: {'id': '6dd908df-b133-42b8-a0a0-31e81d2ff40d', 'status': 'created'}
+2026-07-20T02:52:58.138750 DEBUG    immich_cli.cli: upload command finished
+2026-07-20T02:56:53.619301 DEBUG    immich_cli.cli: command line:.\src\immich_cli\__main__.py --log trace.log download 6dd908df-b133-42b8-a0a0-31e81d2ff40d  [IMMICH_API_KEY env present]
+2026-07-20T02:56:53.619301 DEBUG    immich_cli.cli: CLI start: server=http://127.0.0.1:2283/api verbose=False log_file=trace.log
+2026-07-20T02:56:53.873129 DEBUG    immich_cli.cli: download: fetching archive for 6dd908df-b133-42b8-a0a0-31e81d2ff40d
+2026-07-20T02:56:53.873129 DEBUG    immich_cli.client: HTTP >>> POST http://127.0.0.1:2283/api/download/archive
+  headers: host: 127.0.0.1:2283; accept: */*; accept-encoding: gzip, deflate, zstd; connection: keep-alive; user-agent: python-httpx/0.28.1; x-api-key: <redacted>; content-length: 53; content-type: application/json
+  body: {"assetIds":["6dd908df-b133-42b8-a0a0-31e81d2ff40d"]}
+2026-07-20T02:56:53.972455 DEBUG    immich_cli.client: HTTP <<< POST http://127.0.0.1:2283/api/download/archive -> 200 (95 ms)
+  headers: x-powered-by: Express; x-correlation-id: 54yc4pp9; content-type: application/octet-stream; vary: Accept-Encoding; content-encoding: gzip; date: Mon, 20 Jul 2026 01:56:53 GMT; connection: keep-alive; keep-alive: timeout=5; transfer-encoding: chunked
+  body: <binary 1887428 bytes; head: 'PK\x03\x04\x14\x00\x08\x00\x00\x00�\x0e�\\\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0c\x00\x00\x0019580128.jpg����\x00\x10JFIF\x00\x01\x01\x01\x01,\x01,\x00\x00��'>
+2026-07-20T02:56:53.973530 DEBUG    immich_cli.client: download_archive: wrote 1887428 bytes -> downloads\6dd908df-b133-42b8-a0a0-31e81d2ff40d.zip
+2026-07-20T02:56:53.983243 DEBUG    immich_cli.cli: download archive entries: ['19580128.jpg']
+2026-07-20T02:56:53.997859 DEBUG    immich_cli.cli: download: extracted image -> downloads\19580128.jpg
+2026-07-20T02:56:53.997859 DEBUG    immich_cli.client: HTTP >>> GET http://127.0.0.1:2283/api/assets/6dd908df-b133-42b8-a0a0-31e81d2ff40d
+  headers: host: 127.0.0.1:2283; accept: */*; accept-encoding: gzip, deflate, zstd; connection: keep-alive; user-agent: python-httpx/0.28.1; x-api-key: <redacted>
+  body: 
+2026-07-20T02:56:54.017825 DEBUG    immich_cli.client: HTTP <<< GET http://127.0.0.1:2283/api/assets/6dd908df-b133-42b8-a0a0-31e81d2ff40d -> 200 (17 ms)
+  headers: x-powered-by: Express; x-correlation-id: h0g5tcjn; content-type: application/json; charset=utf-8; etag: "5a4-JsdCwI4vXFAbQKopXZMg6LKI8Co"; vary: Accept-Encoding; content-encoding: gzip; date: Mon, 20 Jul 2026 01:56:54 GMT; connection: keep-alive; keep-alive: timeout=5; transfer-encoding: chunked
+  body: {"id":"6dd908df-b133-42b8-a0a0-31e81d2ff40d","createdAt":"2026-07-20T01:52:58.054Z","ownerId":"b7676f4a-6617-4f23-8308-ceb285566aeb","owner":{"id":"b7676f4a-6617-4f23-8308-ceb285566aeb","email":"btm2005@gmail.com","name":"Dr B. I. Czaczkes","profileImagePath":"","avatarColor":"yellow","profileChangedAt":"2026-07-20T01:27:56.538711+00:00"},"libraryId":null,"type":"IMAGE","originalPath":"/data/upload/b7676f4a-6617-4f23-8308-ceb285566aeb/19/4c/194c2f81-3661-4d54-9628-66b31f72c376.jpg","originalFileName":"19580128.jpg","originalMimeType":"image/jpeg","thumbhash":null,"fileCreatedAt":"2026-07-20T01:52:57.977Z","fileModifiedAt":"2026-07-20T01:52:57.977Z","localDateTime":"2026-07-20T01:52:57.977Z","updatedAt":"2026-07-20T01:52:58.054Z","isFavorite":false,"isArchived":false,"isTrashed":false,"visibility":"timeline","duration":null,"exifInfo":{"make":null,"model":null,"exifImageWidth":null,"exifImageHeight":null,"fileSizeInByte":1887290,"orientation":null,"dateTimeOriginal":null,"modifyDate":null,"timeZone":null,"lensModel":null,"fNumber":null,"focalLength":null,"iso":null,"exposureTime":null,"latitude":null,"longitude":null,"city":null,"state":null,"country":null,"description":"","projectionType":null,"rating":null},"livePhotoVideoId":null,"tags":[],"people":[],"checksum":"s5bNWNoAHwiobJvvaNZ591cK2vs=","stack":null,"isOffline":false,"hasMetadata":true,"duplicateId":null,"resized":true,"width":null,"height":null,"isEdited":false}
+2026-07-20T02:56:54.017825 DEBUG    immich_cli.client: HTTP >>> GET http://127.0.0.1:2283/api/faces?id=6dd908df-b133-42b8-a0a0-31e81d2ff40d
+  headers: host: 127.0.0.1:2283; accept: */*; accept-encoding: gzip, deflate, zstd; connection: keep-alive; user-agent: python-httpx/0.28.1; x-api-key: <redacted>
+  body: 
+2026-07-20T02:56:54.028552 DEBUG    immich_cli.client: HTTP <<< GET http://127.0.0.1:2283/api/faces?id=6dd908df-b133-42b8-a0a0-31e81d2ff40d -> 200 (11 ms)
+  headers: x-powered-by: Express; x-correlation-id: 7799cy9e; content-type: application/json; charset=utf-8; content-length: 2; etag: "2-l9Fw4VUO7kr8CvBlt4zaMCqXZ0w"; vary: Accept-Encoding; date: Mon, 20 Jul 2026 01:56:54 GMT; connection: keep-alive; keep-alive: timeout=5
+  body: []
+2026-07-20T02:56:54.029060 DEBUG    immich_cli.client: HTTP >>> GET http://127.0.0.1:2283/api/albums?assetId=6dd908df-b133-42b8-a0a0-31e81d2ff40d
+  headers: host: 127.0.0.1:2283; accept: */*; accept-encoding: gzip, deflate, zstd; connection: keep-alive; user-agent: python-httpx/0.28.1; x-api-key: <redacted>
+  body: 
+2026-07-20T02:56:54.033969 DEBUG    immich_cli.client: HTTP <<< GET http://127.0.0.1:2283/api/albums?assetId=6dd908df-b133-42b8-a0a0-31e81d2ff40d -> 200 (5 ms)
+  headers: x-powered-by: Express; x-correlation-id: 0fq6opyj; content-type: application/json; charset=utf-8; content-length: 2; etag: "2-l9Fw4VUO7kr8CvBlt4zaMCqXZ0w"; vary: Accept-Encoding; date: Mon, 20 Jul 2026 01:56:54 GMT; connection: keep-alive; keep-alive: timeout=5
+  body: []
+2026-07-20T02:56:54.034477 DEBUG    immich_cli.cli: download: asset type=IMAGE faces=0 albums=0
+2026-07-20T02:56:54.035003 INFO     immich_cli.meta_export: Generated .meta.json for 6dd908df-b133-42b8-a0a0-31e81d2ff40d at downloads\19580128.jpg.meta.json
+2026-07-20T02:56:54.035531 DEBUG    immich_cli.cli: download command finished
